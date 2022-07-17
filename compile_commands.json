@@ -1,0 +1,16 @@
+
+
+[
+    {
+        "arguments": [
+            "gcc",
+            "-c",
+            "-std=c89",
+            "-o",
+            "unp",
+            "unp.c"
+        ],
+        "directory": "/home/alpha/org/develop/c",
+        "file": "unp.c"
+    }
+]
