@@ -74,6 +74,7 @@ int main(int argc, char *argv[])
 		sub_str(inp->txid, buffer, offset + 10, TXID);
 		sub_str(inp->vin, buffer, offset + 74, 8);
 		sub_str(tmp, buffer, offset + 82, 2);
+		ss_len = strtoul(tmp, &p, 16);
 		
 	}
 
@@ -90,7 +91,7 @@ int main(int argc, char *argv[])
 	printf("inputs\t%s\n",tx.inputs);
 	printf("txid\t%s\n",tx.inputs_array[0].txid);
 	printf("vin\t%s\n",tx.inputs_array[0].vin);
-	printf("\t%s\n", tmp);
+	printf("ss_len\t%d\n",ss_len );
 	return 0;
 }
 
@@ -111,10 +112,6 @@ segwit markerand flag 2 bytes 4 characters    8-11
 inputs 01          1 byte    2 characters     either 8-9 or 12-13
 txid 38966caadb834f37ddb3c51ec417dea9cd9c392e3ab465edd7959de6652c6b4e   32 bytes
 64 characters  either 10-73 or 14-78
-
-variable area we don't know how many inputs we will get. should each input be
-it's own struct? can we create on the fly depending on the number of inputs
-we read the 5th byte to decide  how many inputs 
 vin 00000000  
 8b
 scriptsig, long script sig, parse it out.
@@ -131,4 +128,14 @@ locktime 00000000 */
 /* same as above unserialized 010000000138966caadb834f37ddb3c51ec417dea9cd9c392e3ab465edd7959de6652c6b4e000000008b483045022100a66c833777f44b828bc1c327e4ee59fde31fd72b5577efabd85090d4ff8f9b6e022041921d797c592df2d566cc7f4fa119ada1aa3e7c8145c9543dd1e5ba765434c20141042ef60f0a969878a7d6acb4e8ba2645771c25b9713ceb4b545678bdfcc0507ab8b7c6650579c0f1b8ac09998501d372aa93657829c4f3c4a8268f0cf87aa8784cffffffff021e5f9902000000001976a9149e71046a35c496d7035e57b564f680adb9a13e9688ac71007000000000001976a914197807be6fab6fa0ccc6f0f6047a63b398b309f088ac00000000
 */
 /* catch errors, make sure the inpute string is of a certain lenght and only has legal characters */
-/* hello */
+/* we can determine start and end of every string that needs to be parsed, maybe
+that should be all calculated first and placed in multi dimesnional array or
+some other data structure instead of figure out as you gom
+we need to start off by calculating the length of all the varibale length fields
+I will only do the first byte now, I will take care of fd fe ff later, for more
+complex
+parsing.
+also need to account for coinbase tx's.
+
+*/
+
