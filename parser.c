@@ -8,8 +8,8 @@
 
 struct inputs {
 	
-	char			txid[64];
-	char			vin[8];
+	char			txid[65];
+	char			vin[9];
 	char			*script_sig;
 	char			sequence[8];
 	int			len;
@@ -27,13 +27,13 @@ struct transaction {
 	char			version[8];
 	char			seg_mkrflag[4];
 	char			inputs[2];
-	struct inputs		*inputs_array;
+	struct inputs		*ins_arr;
 	char			outputs[2];
-	struct outputs		*outputs_array;
+	struct outputs		*outs_arr;
 	char			locktime[8];
 };
 
-enum field_len{version = 8, segwit = 4, inputs = 2, outputs = 2, locktime = 8, TXID = 64};
+enum field_len{VERSION = 8, SWIT = 4, INPUTS = 2, OUTPUTS = 2, LOCKTIME = 8, TXID = 64, VIN = 8, SEQUENCE = 8};
 
 void sub_str(char *, char *, int, int);
 
@@ -56,29 +56,32 @@ int main(int argc, char *argv[])
 	strcpy(buffer,argv[1]);
 	
 	/* check for segwit tx */
-	sub_str(tx.seg_mkrflag, buffer, 8, segwit);
+	sub_str(tx.seg_mkrflag, buffer, 8, SWIT);
         if(strcmp(tx.seg_mkrflag, SEGWIT) == 0)
 		offset = 4;
 
 	
-	sub_str(tx.version, buffer, 0, version);
-        sub_str(tx.inputs, buffer, 8 + offset, inputs);
+	sub_str(tx.version, buffer, 0, VERSION);
+        sub_str(tx.inputs, buffer, 8 + offset, INPUTS);
 
 	/* allocate input structs for each input */
 	num_inputs = strtoul(tx.inputs, &p, 16);
-	inp = malloc(num_inputs * sizeof(struct inputs));
-
+	tx.ins_arr = malloc(num_inputs * sizeof(struct inputs));
+	
 	/* iterate over inputs */
-	offset += inp->len;
-	for (i = 0; i < num_inputs; ++i) {
-		sub_str(inp->txid, buffer, offset + 10, TXID);
-		sub_str(inp->vin, buffer, offset + 74, 8);
+	for (i = 0; i < num_inputs; i++) {
+
+		sub_str(tx.ins_arr->txid, buffer, offset + 10, TXID);
+		sub_str(tx.ins_arr->vin, buffer, offset + 74, VIN);
 		sub_str(tmp, buffer, offset + 82, 2);
 		ss_len = strtoul(tmp, &p, 16);
+		tx.ins_arr->script_sig = malloc(2 * ss_len + 1);
+		sub_str(tx.ins_arr->script_sig, buffer, offset + 84, ss_len * 2);
+		sub_str(tx.ins_arr->sequence, buffer, offset + 84 + ss_len * 2, SEQUENCE);
 		
 	}
 
-        tx.inputs_array = inp;
+        
 	
 	/* size of a given input is txid + scriptsig + sequence
            calculate size for each input and that offset is where
@@ -86,23 +89,24 @@ int main(int argc, char *argv[])
 	   that is where the output begins.
 	*/
 
-
+	
         printf("\nversion\t%s\n",tx.version);
 	printf("inputs\t%s\n",tx.inputs);
-	printf("txid\t%s\n",tx.inputs_array[0].txid);
-	printf("vin\t%s\n",tx.inputs_array[0].vin);
-	printf("ss_len\t%d\n",ss_len );
+	printf("txid\t%s\n",tx.ins_arr->txid);
+	printf("vin\t%s\n",tx.ins_arr->vin);
+	printf("ssig\t%s\n",tx.ins_arr->script_sig);
+	printf("seq\t%s\n",tx.ins_arr->sequence);
 	return 0;
 }
 
 
 void sub_str(char *dest, char *src, int start_loc, int len)
 {
-	int i;
+	int j;
 
-	for(i = 0 ; i < len; i++)
-		dest[i] = src[start_loc++];
-	dest[i] = '\0';
+	for(j = 0 ; j < len; j++)
+		dest[j] = src[start_loc++];
+	dest[j] = '\0';
 }	
 
 
