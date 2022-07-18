@@ -33,7 +33,32 @@ struct transaction {
 	char			locktime[8];
 };
 
+
 enum field_len{VERSION = 8, SWIT = 4, INPUTS = 2, OUTPUTS = 2, LOCKTIME = 8, TXID = 64, VIN = 8, SEQUENCE = 8};
+
+/*
+field(index,len)
+
+     if segwit (8,4) == TRUE index += 4;
+
+version		(0,8)
+#inputs_basic	(8,2)
+txid		(10,64)
+vin		(74,8)
+ss		(82,var1)
+seq		(82+var1,8)
+each inputlenght is  (80 + var1)
+
+input 2 txid	(90  + var1, 64)
+vin		(154 +var1, 8)
+ss		(162+var1, var2)
+seq		(162+var1+var2,8)
+
+ouputs          (number of inputs *80 + var1,var2,var3...., 2)
+amount		(outputs + 2, 16)
+
+*/
+
 
 void sub_str(char *, char *, int, int);
 
@@ -54,6 +79,15 @@ int main(int argc, char *argv[])
 	}
 
 	strcpy(buffer,argv[1]);
+
+
+	/* get the number if inputs this is going to be different for segwit,legacy, coinbase tx*/
+	sub_str(tx.inputs, buffer, 8 + offset, INPUTS);
+	num_inputs = strtoul(tx.inputs, &p, 16);
+
+
+
+
 	
 	/* check for segwit tx */
 	sub_str(tx.seg_mkrflag, buffer, 8, SWIT);
@@ -62,10 +96,10 @@ int main(int argc, char *argv[])
 
 	
 	sub_str(tx.version, buffer, 0, VERSION);
-        sub_str(tx.inputs, buffer, 8 + offset, INPUTS);
+
 
 	/* allocate input structs for each input */
-	num_inputs = strtoul(tx.inputs, &p, 16);
+	
 	tx.ins_arr = malloc(num_inputs * sizeof(struct inputs));
 	
 	/* iterate over inputs */
