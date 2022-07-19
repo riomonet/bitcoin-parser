@@ -1,3 +1,4 @@
 # a transaction parser in C
 
-work in progress
+Currently only able to parse legacy transctions with less
+than 253 inputs or outputs
