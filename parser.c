@@ -7,10 +7,10 @@
 
 struct in {
 	
-	char			txid[65];
-	char			vout[9];
+	char			*txid;
+	char			*vout;
 	char			*script_sig;
-	char			sequence[8];
+	char			*sequence;
 };
 
 struct out {
@@ -26,9 +26,9 @@ struct transaction {
 	char			seg_mkrflag[5];
 	char			inputs[3];
 	struct in		*in_arr;
-	char			outputs[2];
-	struct out		*out_arr;
-	char			locktime[9];
+	/* char			outputs[3]; */
+	/* struct out		*out_arr; */
+	/* char			locktime[9]; */
 };
 
 
@@ -38,9 +38,9 @@ int main(int argc, char *argv[])
 {
 	int			i, j;
 	int			num_inputs, ss_len;
-	char			c, *p, buffer[1000];
+	char			c, *p, buffer[10000];
 	struct transaction	tx;
-
+	struct in		ins;
         /* raw transaction is passed in thru argv[1],  I copy it to an char
            array called buffer, **fix_me: buffer should actually be delcared as
 	   a char * instead of char arraay[1000] and I should Malloc()len of argv[1]).
@@ -53,6 +53,7 @@ int main(int argc, char *argv[])
 	
 	strcpy(buffer,argv[1]);
 	char *ptr = buffer;
+	char *st, *end;
 
         /* find script sig lengths for each input:
 	the string starting at buffer plus 8 is the string representation of
@@ -62,61 +63,80 @@ int main(int argc, char *argv[])
 	value if necessary.
 	*/
 
-	
+
+	st = ptr;
 	for (i = 0; i < 8; ++i) {
 		tx.version[i] = *ptr++;
 	}
 	tx.version[i] = '\0';
-
+	printf("%lu\n", ptr - st);
 	for (i = 0; i < 2; ++i) {
 		tx.inputs[i] = *ptr++;
 	}
 	tx.inputs[i] = '\0';
-
+	printf("%lu\n", ptr - st);
+	
 	char *tmp = malloc(3 * sizeof(char));
 	int  script_len;
 	int  inp_cnt = strtoul(tx.inputs, &p, 16);
 	tx.in_arr = malloc(inp_cnt * sizeof(struct in));
-	
+
+
+        printf("\n" );
         for (i = 0; i < inp_cnt ; ++i) {
+
+		tx.in_arr[i].txid = malloc(64);
 		for (j = 0; j < 64; ++j) {
 			tx.in_arr[i].txid[j] = *ptr++;
 		}
-		tx.in_arr[i].txid[64] = '\0';
+		tx.in_arr[i].txid[65] = '\0';
 
-		for (j = 0; j < 8; ++j) {
+		
+		tx.in_arr[i].vout = malloc(8);
+                for (j = 0; j < 8; ++j) {
 			tx.in_arr[i].vout[j] = *ptr++;
 		}
 		tx.in_arr[i].vout[8] = '\0';
-		
+
+
                 for (j = 0; j < 2; ++j) {
 			tmp[j] = *ptr++;
 		}
 		tmp[2] = '\0';
 
+
+
 		script_len = strtoul(tmp, &p, 16);
-		tx.in_arr[i].script_sig = malloc(2 * script_len * sizeof(char));
-		for (j = 0; j < script_len * 2; ++j) {
+		tx.in_arr[i].script_sig = malloc((2 * script_len + 1));
+                for (j = 0; j < script_len * 2; ++j) {
 			tx.in_arr[i].script_sig[j] = *ptr++;
 		}
-		tx.in_arr[i].script_sig[script_len * 2] = '\0';
-		for (j = 0; j < 8; ++j) {
+                tx.in_arr[i].script_sig[script_len * 2] = '\0';
+
+		
+		tx.in_arr[i].sequence = malloc(9);
+                for (j = 0; j < 8; ++j) {
 			tx.in_arr[i].sequence[j] = *ptr++;
 		}
-		tx.in_arr[i].sequence[j] = '\0';
+		tx.in_arr[i].sequence[8] = '\0';
+
+	}
+
+
+	
+	printf("\n%s\n%s\n",tx.version,tx.inputs);
+
+	for (i = 0; i < inp_cnt ; ++i) {
+		printf("\n__________________________________\n");
+		printf("%d\n",i);
+		printf("txid:\t%s\n", tx.in_arr[i].txid);
+		printf("vout:\t%s\n", tx.in_arr[i].vout);
+	
+		printf("sc_sig:\t%s\n", tx.in_arr[i].script_sig);
+		printf("seq:\t%s\n", tx.in_arr[i].sequence);
 		
 	}
 
-
-	printf("%d\n", inp_cnt );
-
-	printf("\n%s\n%s\n",tx.version,tx.inputs);
-	for (i = 0; i < inp_cnt ; ++i) {
-		printf("%s\n", tx.in_arr[i].txid);
-		printf("%s\n", tx.in_arr[i].vout);
-		printf("%s\n", tx.in_arr[i].script_sig);
-		printf("%s\n", tx.in_arr[i].sequence);
-	}
 
 	return 0;
 }
@@ -227,4 +247,11 @@ fffffffff
 8a
 47304402207981c209094335daf272e25877ecb19b38e02019a3d76590a55d6a3b621f4e96022062b3780c2807e7459bed1be86236360ac5c19fdbc5429bc371f2c872da84c43f0141041d04a4e938807cea2313d712daf49d600e164f7536f54665e5f7f55fdfdafc1b9db0bf4b7f7c7988ef61f3ff2f22e429742284cce94b76c98594dd3a874fbb05
 ffffffff
-33e1f60d3c1965b0e2f72fad712bacdf6650cb1f1e3c54563ebf72f862c3ae26010000008a47304402206d3866b2b00e18449ba1d9436972a49a55116c5ffa5a9ca48eb630a47e56eac6022063c72d5c1d4958a4368193c31d263e147f011b6bfea6669d4952bc01122f950e014104b3b8f4b793a6d46f3d8007ff65d3002a375057564d5eb7afe1e10a3db133fbbf3a182a354911ae00b999394e31d5d4cd9321b68bea48f6c41209d5d3db718798ffffffff0240420f00000000001976a914273d05143f352d9184838f59e93ceee09579179f88ac00c51c11030000001976a914bb01b691aeadceabc886c1ff1981ebaf9f6c692b88ac00000000 */
+33e1f60d3c1965b0e2f72fad712bacdf6650cb1f1e3c54563ebf72f862c3ae26
+01000000
+8a
+47304402206d3866b2b00e18449ba1d9436972a49a55116c5ffa5a9ca48eb630a47e56eac6022063c72d5c1d4958a4368193c31d263e147f011b6bfea6669d4952bc01122f950e014104b3b8f4b793a6d46f3d8007ff65d3002a375057564d5eb7afe1e10a3db133fbbf3a182a354911ae00b999394e31d5d4cd9321b68bea48f6c41209d5d3db718798
+ffffffff
+
+0240420f00000000001976a914273d05143f352d9184838f59e93ceee09579179f88ac00c51c11030000001976a914bb01b691aeadceabc886c1ff1981ebaf9f6c692b88ac00000000 */
+
