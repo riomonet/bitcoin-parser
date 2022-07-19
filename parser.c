@@ -2,11 +2,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-
+#define
 #define SEGWIT "0001"
 
-
-struct inputs {
+struct in {
 	
 	char			txid[65];
 	char			vin[9];
@@ -15,7 +14,7 @@ struct inputs {
 	int			len;
 };
 
-struct outputs {
+struct out {
 	
 	char			txid[64];
 	char			*script_sig;
@@ -34,32 +33,6 @@ struct transaction {
 };
 
 
-enum field_len{VERSION = 8, SWIT = 4, INPUTS = 2, OUTPUTS = 2, LOCKTIME = 8, TXID = 64, VIN = 8, SEQUENCE = 8};
-
-/*
-field(index,len)
-
-     if segwit (8,4) == TRUE index += 4;
-
-version		(0,8)
-#inputs_basic	(8,2)
-txid		(10,64)
-vin		(74,8)
-ss		(82,var1)
-seq		(82+var1,8)
-each inputlenght is  (80 + var1)
-
-input 2 txid	(90  + var1, 64)
-vin		(154 +var1, 8)
-ss		(162+var1, var2)
-seq		(162+var1+var2,8)
-
-ouputs          (number of inputs *80 + var1,var2,var3...., 2)
-amount		(outputs + 2, 16)
-
-*/
-
-
 void sub_str(char *, char *, int, int);
 
 int main(int argc, char *argv[])
@@ -69,79 +42,71 @@ int main(int argc, char *argv[])
 	char			c, *p, buffer[1000];
 	struct transaction	tx;
 	struct inputs		*inp;
-	char			tmp[2];
 
+        /* raw transaction is passed in thru argv[1],  I copy it to an char
+           array called buffer, **fix_me: buffer should actually be delcared as
+	   a char * instead of char arraay[1000] and I should Malloc()len of argv[1]).
+	*/
 
-	/* if there is no argument exit */
 	if (argv[1] == NULL) {
 		printf("usage: raw tx arg requrired");
 		exit(1);
 	}
 
 	strcpy(buffer,argv[1]);
+	char *ptr = buffer;
 
-
-	/* get the number if inputs this is going to be different for segwit,legacy, coinbase tx*/
-	sub_str(tx.inputs, buffer, 8 + offset, INPUTS);
-	num_inputs = strtoul(tx.inputs, &p, 16);
-
-
-
-
-	
-	/* check for segwit tx */
-	sub_str(tx.seg_mkrflag, buffer, 8, SWIT);
-        if(strcmp(tx.seg_mkrflag, SEGWIT) == 0)
-		offset = 4;
-
-	
-	sub_str(tx.version, buffer, 0, VERSION);
-
-
-	/* allocate input structs for each input */
-	
-	tx.ins_arr = malloc(num_inputs * sizeof(struct inputs));
-	
-	/* iterate over inputs */
-	for (i = 0; i < num_inputs; i++) {
-
-		sub_str(tx.ins_arr->txid, buffer, offset + 10, TXID);
-		sub_str(tx.ins_arr->vin, buffer, offset + 74, VIN);
-		sub_str(tmp, buffer, offset + 82, 2);
-		ss_len = strtoul(tmp, &p, 16);
-		tx.ins_arr->script_sig = malloc(2 * ss_len + 1);
-		sub_str(tx.ins_arr->script_sig, buffer, offset + 84, ss_len * 2);
-		sub_str(tx.ins_arr->sequence, buffer, offset + 84 + ss_len * 2, SEQUENCE);
-		
-	}
-
-        
-	
-	/* size of a given input is txid + scriptsig + sequence
-           calculate size for each input and that offset is where
-           the next input begins or if there is none left
-	   that is where the output begins.
+        /* find script sig lengths for each input:
+	the string starting at buffer plus 8 is the string representation of
+        number of inputs, I need this value to calculate where the var_len
+        fields are for each input. Need to convert it to an integer to make
+        it useful. **fix_me: will need to account for fd,fe,ff to expand this
+	value if necessary.
 	*/
 
+	char *tmp = malloc(3 * sizeof(char));
+	strncpy(tmp, ptr += 10, 2);
+	num_inputs = strtoul(tmp, &p, 16);
+
+
+        /* there is one var len field for each input
+           it is a string with 2 char's but I will need 3 chars
+           in the new string to store it with a '\0' at the end.
+	   so will need an array of strings each with 3 chars
+	   
+	 */
+
 	
-        printf("\nversion\t%s\n",tx.version);
-	printf("inputs\t%s\n",tx.inputs);
-	printf("txid\t%s\n",tx.ins_arr->txid);
-	printf("vin\t%s\n",tx.ins_arr->vin);
-	printf("ssig\t%s\n",tx.ins_arr->script_sig);
-	printf("seq\t%s\n",tx.ins_arr->sequence);
+	/* first input */
+
+
+
+
+        /*
+          inp1 = starts at 10
+              txid starts at + 0
+              vout starts at + 64
+              script sig start at + 72
+              seq starts at + Plus len of scriptsig
+
+          inp2 = starts at location of input 1 + lenofscriptsig1 + 80
+          inp3 = starts at location of input 2 + lenfht of scriptsig 2 + 80
+	  etc.....
+
+	 */
+
+
+
+
 	return 0;
 }
 
 
-void sub_str(char *dest, char *src, int start_loc, int len)
-{
-	int j;
 
-	for(j = 0 ; j < len; j++)
-		dest[j] = src[start_loc++];
-	dest[j] = '\0';
-}	
+
+
+
+
 
 
 /* random raw transaction
@@ -177,3 +142,34 @@ also need to account for coinbase tx's.
 
 */
 
+
+/*
+field(index,len)
+
+     if segwit (8,4) == TRUE index += 4;
+
+version		(0,8)
+#inputs_basic	(8,2)
+txid		(10,64)
+vin		(74,8)
+ss		(82,var1)
+seq		(82+var1,8)
+EACH INPUTLENGHT IS  (80 + var1)
+
+input 2 txid	(90  + var1, 64)
+vin		(154 +var1, 8)
+pss		(162+var1, var2)
+seq		(162+var1+var2,8)
+
+ouputs          (number of inputs *80 + var1,var2,var3...., 2)
+amount		(outputs + 2, 16)
+
+*/
+
+/*
+1. get number of inputs
+2. where is the varlen field of the script sig for input 1
+3. where is it for subsequent inputs ?
+
+
+*/
