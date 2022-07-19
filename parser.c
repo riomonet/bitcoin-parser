@@ -2,34 +2,33 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define
+
 #define SEGWIT "0001"
 
 struct in {
 	
 	char			txid[65];
-	char			vin[9];
+	char			vout[9];
 	char			*script_sig;
 	char			sequence[8];
-	int			len;
 };
 
 struct out {
 	
-	char			txid[64];
-	char			*script_sig;
-	char			sequence[8];
+	char			amount[17];
+	char			*pubkey;
+
 };
 
 struct transaction {
 	
-	char			version[8];
-	char			seg_mkrflag[4];
-	char			inputs[2];
-	struct inputs		*ins_arr;
+	char			version[9];
+	char			seg_mkrflag[5];
+	char			inputs[3];
+	struct in		*in_arr;
 	char			outputs[2];
-	struct outputs		*outs_arr;
-	char			locktime[8];
+	struct out		*out_arr;
+	char			locktime[9];
 };
 
 
@@ -37,11 +36,10 @@ void sub_str(char *, char *, int, int);
 
 int main(int argc, char *argv[])
 {
-	int			i, offset = 0;
+	int			i, j;
 	int			num_inputs, ss_len;
 	char			c, *p, buffer[1000];
 	struct transaction	tx;
-	struct inputs		*inp;
 
         /* raw transaction is passed in thru argv[1],  I copy it to an char
            array called buffer, **fix_me: buffer should actually be delcared as
@@ -52,7 +50,7 @@ int main(int argc, char *argv[])
 		printf("usage: raw tx arg requrired");
 		exit(1);
 	}
-
+	
 	strcpy(buffer,argv[1]);
 	char *ptr = buffer;
 
@@ -64,39 +62,58 @@ int main(int argc, char *argv[])
 	value if necessary.
 	*/
 
+	
+	for (i = 0; i < 8; ++i) {
+		tx.version[i] = *ptr++;
+	}
+	tx.version[i] = '\0';
+
+	for (i = 0; i < 2; ++i) {
+		tx.inputs[i] = *ptr++;
+	}
+	tx.inputs[i] = '\0';
+
 	char *tmp = malloc(3 * sizeof(char));
-	strncpy(tmp, ptr += 10, 2);
-	num_inputs = strtoul(tmp, &p, 16);
+	int  script_len;
+	int  inp_cnt = strtoul(tx.inputs, &p, 16);
+	tx.in_arr = malloc(inp_cnt * sizeof(struct in));
+	
+        for (i = 0; i < inp_cnt ; ++i) {
+		for (j = 0; j < 65; ++j) {
+			tx.in_arr[i].txid[j] = *ptr++;
+		}
+		tx.in_arr[i].txid[64] = '\0';
 
-
-        /* there is one var len field for each input
-           it is a string with 2 char's but I will need 3 chars
-           in the new string to store it with a '\0' at the end.
-	   so will need an array of strings each with 3 chars
-	   
-	 */
+		for (j = 0; j < 8; ++j) {
+			tx.in_arr[i].vout[j] = *ptr++;
+		}
+		tx.in_arr[i].vout[7] = '\0';
+		
+                for (j = 0; j < 2; ++j) {
+			tmp[j] = *ptr++;
+		}
+		tmp[j] = '\0';
+		script_len = strtoul(tmp, &p, 16);
+		tx.in_arr[i].script_sig = malloc(2 * script_len * sizeof(char));
+		for (j = 0; j < script_len; ++j) {
+			tx.in_arr[i].script_sig[j] = *ptr++;
+		}
+		tx.in_arr[i].script_sig[j] = '\0';
+		for (j = 0; j < 8; ++j) {
+			tx.in_arr[i].sequence[j] = *ptr++;
+		}
+		tx.in_arr[i].sequence[j] = '\0';
+		
+	}
 
 	
-	/* first input */
-
-
-
-
-        /*
-          inp1 = starts at 10
-              txid starts at + 0
-              vout starts at + 64
-              script sig start at + 72
-              seq starts at + Plus len of scriptsig
-
-          inp2 = starts at location of input 1 + lenofscriptsig1 + 80
-          inp3 = starts at location of input 2 + lenfht of scriptsig 2 + 80
-	  etc.....
-
-	 */
-
-
-
+	printf("\n%s\n%s\n",tx.version,tx.inputs);
+	for (i = 0; i < inp_cnt ; ++i) {
+		printf("%s\n", tx.in_arr[i].txid);
+		printf("%s\n", tx.in_arr[i].vout);
+		printf("%s\n", tx.in_arr[i].script_sig);
+		printf("%s\n", tx.in_arr[i].sequence);
+	}
 
 	return 0;
 }
