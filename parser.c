@@ -107,6 +107,7 @@ int main(int argc, char *argv[])
 
 	tx.out_arr = malloc(output_cnt * sizeof(struct out));
 
+        /* outputs array routine */
         for (i = 0; i < output_cnt; ++i) {
 
 		tx.out_arr[i].amount = malloc(16);
