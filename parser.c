@@ -2,6 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+	/* **: will need to account for fd,fe,ff to expand this
+	value if necessary.
+	*/
 
 struct in {
 	
@@ -19,7 +22,8 @@ struct out {
 
 struct segwit {
 
-	char			*segwit_data;
+	char			stack_cnt[3];
+	char			**redeem_script;
 	
 };
 
@@ -31,19 +35,20 @@ struct transaction {
 	struct in		*in_arr;
 	char			outputs[3];
 	struct out		*out_arr;
-	char			witness_cnt[3];
-	struct segwit		*witness;
+	struct segwit		*witness_arr;
 	char			locktime[9];
 };
 
 
 int main(int argc, char *argv[])
 {
-	int			i, j;
+	int			i, j, k;
 	int			num_inputs;
 	char			*p, *buffer, *ptr;
 	struct transaction	tx;
 
+
+	
         
 	if (argv[1] == NULL) {
 		printf("usage: raw tx arg requrired");
@@ -54,9 +59,6 @@ int main(int argc, char *argv[])
 	strcpy(buffer,argv[1]);
 	ptr = buffer;
 
-	/* **fix_me: will need to account for fd,fe,ff to expand this
-	value if necessary.
-	*/
 
 	for (i = 0; i < 8; ++i) {
 		tx.version[i] = *ptr++;
@@ -72,20 +74,19 @@ int main(int argc, char *argv[])
 		tx.segwit = 0;
 	}
 
-	
-        for (i = 0; i < 2; ++i) {
+
+
+	/* INPUTS */        
+	for (i = 0; i < 2; ++i) {
 		tx.inputs[i] = *ptr++;
 	}
 	tx.inputs[i] = '\0';
-
-
 	
 	char *tmp = malloc(3 * sizeof(char));
 	int  script_len;
 	int  inp_cnt = strtoul(tx.inputs, &p, 16);
 	tx.in_arr = malloc(inp_cnt * sizeof(struct in));
 
-	/* inputs array routine  */
         for (i = 0; i < inp_cnt ; ++i) {
 
 		tx.in_arr[i].txid = malloc(64);
@@ -112,7 +113,7 @@ int main(int argc, char *argv[])
 			tx.in_arr[i].sequence[j] = *ptr++;
 	}
 
-
+        /* OUTPUTS */
 	for (i = 0; i < 2; ++i) {
 		tx.outputs[i] = *ptr++;
 	}
@@ -121,7 +122,6 @@ int main(int argc, char *argv[])
 
 	tx.out_arr = malloc(output_cnt * sizeof(struct out));
 
-        /* outputs array routine */
         for (i = 0; i < output_cnt; ++i) {
 
 		tx.out_arr[i].amount = malloc(16);
@@ -141,40 +141,50 @@ int main(int argc, char *argv[])
                 
 	}
 
-			
-	int wit_cnt = 0;
+	/* WITNESS */
+
+	int witness_item_cnt;
 
         if (tx.segwit) {
 
-		for (i = 0; i < 2; ++i) {
-			tx.witness_cnt[i] = *ptr++;
-		}
-		tx.witness_cnt[2] = '\0';
 
-		wit_cnt = strtoul(tx.witness_cnt, &p, 16);
-		tx.witness = malloc(wit_cnt * sizeof(struct segwit ));
-		
-		for (i = 0; i < wit_cnt; ++i) {
+		tx.witness_arr = malloc(inp_cnt * sizeof(struct segwit)); /* input count number of witness frames */
+
+                for (i = 0; i < inp_cnt; ++i) {
+                  
 			for (j = 0; j < 2; ++j) {
-				tmp[j] = *ptr++;
+				tx.witness_arr[i].stack_cnt[j] = *ptr++;
+                        }
+                        tx.witness_arr[i].stack_cnt[2] = '\0';
+			printf("%s\n", tx.witness_arr[i].stack_cnt);
+                        witness_item_cnt = strtoul(tx.witness_arr[i].stack_cnt, &p, 16);
+
+			tx.witness_arr[i].redeem_script = malloc(witness_item_cnt * sizeof(struct segwit));
+			
+                        for (j = 0; j < witness_item_cnt; ++j) {
+				for (k = 0; k < 2; k++) {
+					tmp[k] = *ptr++;
+				}
+                                tmp[2] = '\0';
+				printf("script lenght is %s\n",tmp);
+                                script_len = strtoul(tmp, &p, 16);
+
+				tx.witness_arr[i].redeem_script[j] = malloc(2 *script_len + 1);
+				for (k = 0; k < script_len * 2; ++k) {
+					tx.witness_arr[i].redeem_script[j][k] = *ptr++;
+				}
+				
 			}
-                        tmp[2] = '\0';
-
-			script_len = strtoul(tmp, &p, 16);
-			tx.witness[i].segwit_data = malloc((2 * script_len + 1));
-
-			for (j = 0; j < script_len * 2; ++j) 
-				tx.witness[i].segwit_data[j] = *ptr++;
 		}
 	}
-	
+
+        
 	for (i = 0; i < 8; ++i) {
 		tx.locktime[i] = *ptr++;
 	}
 	tx.locktime[i] = '\0';
-        
-	printf("\n********************************************************************************\n");
 
+        printf("\n********************************************************************************\n");
         printf("\n\tverison:\t%s\n\n\t\tinput_cnt:\t%s",tx.version,tx.inputs);
 
         for (i = 0; i < inp_cnt ; ++i) {
@@ -187,6 +197,23 @@ int main(int argc, char *argv[])
 		printf("seq:\t%s\n", tx.in_arr[i].sequence);
         }
 
+
+
+
+	if (tx.segwit) {
+		printf("\n\t\twitness_cnt:\t%s",tx.inputs);
+		for (i = 0; i < inp_cnt; ++i) {
+			for (j = 0; j < witness_item_cnt; ++j) {
+				printf("\n__________________________________\n");
+				printf("%d\n",j + 1);
+				printf("%s\n",tx.witness_arr[i].redeem_script[j]);				
+			}
+		}
+	}
+
+
+
+	
         printf("\n\t\toutput_cnt:\t%s",tx.outputs);
 
         for (i = 0; i < output_cnt ; ++i) {
@@ -197,20 +224,13 @@ int main(int argc, char *argv[])
 
         }
 
-	if (tx.segwit) {
 
-		printf("\n\t\twitness_cnt:\t%s",tx.witness_cnt);
-
-                for (i = 0; i < wit_cnt; ++i) {
-			printf("\n__________________________________\n");
-			printf("%d\n",i + 1);
-			printf("witness:\t%s\n", tx.witness[i].segwit_data);
-		}
-	}
-	
 	printf("\n\tlocktime:\t%s\n\n",tx.locktime);
-	printf("\n********************************************************************************\n");
-	return 0;
+
+        printf("\n********************************************************************************\n");
+
+
+        return 0;
 }
 
 
